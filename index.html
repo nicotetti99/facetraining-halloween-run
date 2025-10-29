@@ -2,84 +2,56 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>FaceTraining Halloween Run</title>
+<title>FaceTraining Halloween Run – Gothic Edition</title>
 <style>
-  body { margin: 0; background: #121212; color: #fff; text-align: center; font-family: monospace; }
-  canvas { background: #000; border: 2px solid #fff; display: block; margin: 20px auto; }
+  body { margin: 0; background: #0f0a24; color: #fff; text-align: center; font-family: monospace; }
+  h1 { margin-top: 10px; }
+  canvas { background: #1a0d2e; border: 2px solid #fff; display: block; margin: 20px auto; }
   #game-over { display: none; font-size: 24px; margin-top: 20px; }
+  button { padding: 8px 16px; font-size: 16px; }
 </style>
 </head>
 <body>
-<h1>FaceTraining Halloween Run</h1>
+<h1>Halloween Gothic Run</h1>
 <canvas id="game" width="800" height="400"></canvas>
 <div id="game-over">
-  <p>Game over! Punteggio: <span id="score-output"></span></p>
+  <p>Gioco terminato! Punteggio: <span id="score-output"></span></p>
   <button onclick="resetGame()">Rigioca</button>
 </div>
 <script>
-// Impostazioni canvas
+// Canvas setup
 const canvas  = document.getElementById('game');
 const ctx     = canvas.getContext('2d');
 const width   = canvas.width;
 const height  = canvas.height;
 
-// Oggetto giocatore
+// Player (Veronica) properties
 const player = {
-  x: 50,
-  y: height - 60,
+  x: 80,
+  y: height - 80,
   width: 40,
-  height: 40,
-  color: '#ffb300',
+  height: 60,
   velocityY: 0,
-  gravity: 0.6,
-  jumpForce: 12,
-  onGround: true,
+  gravity: 0.7,
+  jumpForce: 14,
+  onGround: true
 };
 
-// Fantasma inseguitore
-const ghost = {
-  x: -100,
-  y: height - 60,
-  width: 40,
-  height: 40,
-  color: '#99ccff'
-};
-
-// Proiettili della pistola
-let bullets = [];
-
-// Ostacoli (zucche/lapidi)
+// Obstacles (ghosts)
 let obstacles = [];
 let obstacleTimer = 0;
-const obstacleInterval = 120; // ogni N frame
+const obstacleInterval = 90; // spawn every ~90 frames
 
-// Stato del gioco
+// Game state
 let score = 0;
 let gameOver = false;
 
-// Gestione input tastiera
-const keys = {};
+// Keyboard/touch input
 document.addEventListener('keydown', (e) => {
-  keys[e.code] = true;
-  // Salta
   if ((e.code === 'Space' || e.code === 'ArrowUp') && player.onGround && !gameOver) {
     player.velocityY = -player.jumpForce;
     player.onGround = false;
   }
-  // Spara
-  if (e.code === 'KeyF' && !gameOver) {
-    bullets.push({
-      x: player.x + player.width,
-      y: player.y + player.height / 2 - 2,
-      width: 10,
-      height: 4,
-      speed: 8,
-      color: '#00e6e6'
-    });
-  }
-});
-document.addEventListener('keyup', (e) => {
-  keys[e.code] = false;
 });
 canvas.addEventListener('touchstart', () => {
   if (player.onGround && !gameOver) {
@@ -88,12 +60,14 @@ canvas.addEventListener('touchstart', () => {
   }
 });
 
-// Loop principale del gioco
+// Main game loop
 function update() {
   if (gameOver) return;
+  // Clear canvas
   ctx.clearRect(0, 0, width, height);
+  drawBackground();
 
-  // Aggiorna giocatore
+  // Update player position
   player.velocityY += player.gravity;
   player.y += player.velocityY;
   if (player.y + player.height >= height - 20) {
@@ -102,72 +76,28 @@ function update() {
     player.onGround = true;
   }
 
-  // Disegna giocatore
-  ctx.fillStyle = player.color;
-  ctx.fillRect(player.x, player.y, player.width, player.height);
-  // Disegna scritta sulla maglietta
-  ctx.fillStyle = '#000';
-  ctx.font = '10px monospace';
-  ctx.fillText('Face', player.x + 4, player.y + 18);
-  ctx.fillText('Trainer', player.x + 2, player.y + 30);
+  // Draw player (16-bit Veronica)
+  drawPlayer();
 
-  // Aggiorna fantasma (segue il giocatore con un ritardo)
-  ghost.x += 0.5; // move slowly
-  ctx.fillStyle = ghost.color;
-  ctx.beginPath();
-  // semplice forma di fantasma con cerchio e rettangolo
-  ctx.arc(ghost.x + ghost.width / 2, ghost.y + 20, 20, Math.PI, 2 * Math.PI);
-  ctx.rect(ghost.x, ghost.y + 20, ghost.width, ghost.height - 20);
-  ctx.fill();
-
-  // Aggiorna e disegna proiettili
-  bullets = bullets.filter(b => b.x < width);
-  bullets.forEach(bullet => {
-    bullet.x += bullet.speed;
-    ctx.fillStyle = bullet.color;
-    ctx.fillRect(bullet.x, bullet.y, bullet.width, bullet.height);
-  });
-
-  // Genera ostacoli
+  // Spawn obstacles
   obstacleTimer++;
   if (obstacleTimer >= obstacleInterval) {
     obstacleTimer = 0;
-    const size = Math.random() < 0.5 ? 30 : 50; // zucca piccola o lapide grande
+    const size = 50;
     obstacles.push({
       x: width,
       y: height - 20 - size,
       width: size,
-      height: size,
-      color: size === 30 ? '#ff7518' : '#663300' // zucca arancione o lapide marrone
+      height: size
     });
   }
 
-  // Aggiorna e disegna ostacoli
+  // Update and draw obstacles
   obstacles = obstacles.filter(obs => obs.x + obs.width > 0);
-  obstacles.forEach(obs => {
-    obs.x -= 4;
-    ctx.fillStyle = obs.color;
-    ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
-  });
-
-  // Collisioni proiettile-ostacolo
-  bullets.forEach((bullet, bIndex) => {
-    obstacles.forEach((obs, oIndex) => {
-      if (
-        bullet.x < obs.x + obs.width &&
-        bullet.x + bullet.width > obs.x &&
-        bullet.y < obs.y + obs.height &&
-        bullet.y + bullet.height > obs.y
-      ) {
-        bullets.splice(bIndex, 1);
-        obstacles.splice(oIndex, 1);
-        score += 10;
-      }
-    });
-  });
-
-  // Collisioni giocatore-ostacolo o giocatore-fantasma
-  obstacles.forEach(obs => {
+  obstacles.forEach((obs) => {
+    obs.x -= 5; // move left
+    drawGhost(obs.x, obs.y, obs.width, obs.height);
+    // Collision detection
     if (
       player.x < obs.x + obs.width &&
       player.x + player.width > obs.x &&
@@ -177,47 +107,99 @@ function update() {
       endGame();
     }
   });
-  // Fantasma raggiunge il giocatore
-  if (
-    ghost.x + ghost.width > player.x &&
-    ghost.x < player.x + player.width &&
-    ghost.y + ghost.height > player.y &&
-    ghost.y < player.y + player.height
-  ) {
-    endGame();
-  }
 
-  // Aggiorna punteggio
+  // Update score
   score++;
-  ctx.fillStyle = '#fff';
+  ctx.fillStyle = '#ffffff';
   ctx.font = '16px monospace';
-  ctx.fillText('Score: ' + score, 10, 20);
+  ctx.fillText('Punteggio: ' + score, 10, 20);
 
   requestAnimationFrame(update);
 }
 
-// Termina il gioco
+// Draw gothic background with moon and pumpkins
+function drawBackground() {
+  // sky gradient
+  const gradient = ctx.createLinearGradient(0, 0, 0, height);
+  gradient.addColorStop(0, '#1a0d2e');
+  gradient.addColorStop(1, '#0f0a24');
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, width, height);
+
+  // moon
+  ctx.fillStyle = '#ddd';
+  ctx.beginPath();
+  ctx.arc(width - 80, 80, 40, 0, 2 * Math.PI);
+  ctx.fill();
+
+  // ground
+  ctx.fillStyle = '#2f204b';
+  ctx.fillRect(0, height - 20, width, 20);
+}
+
+// Draw Veronica as 16-bit pixel art figure
+function drawPlayer() {
+  const { x, y, width: w, height: h } = player;
+  // Draw head (hair)
+  ctx.fillStyle = '#3f2b56'; // hair dark purple
+  ctx.fillRect(x + 5, y, w - 10, h * 0.3);
+  ctx.fillStyle = '#ffccaa'; // skin color
+  ctx.fillRect(x + 10, y + h * 0.05, w - 20, h * 0.2);
+  // Draw body/shirt
+  ctx.fillStyle = '#7268a6';
+  ctx.fillRect(x + 5, y + h * 0.3, w - 10, h * 0.4);
+  // Shirt text 'Veronica'
+  ctx.fillStyle = '#ffffff';
+  ctx.font = '10px monospace';
+  ctx.fillText('Veronica', x - 2, y + h * 0.55);
+  // Draw legs
+  ctx.fillStyle = '#3f2b56';
+  ctx.fillRect(x + 8, y + h * 0.7, w - 16, h * 0.3);
+}
+
+// Draw ghost obstacles
+function drawGhost(x, y, width, height) {
+  // body
+  ctx.fillStyle = '#4d2e94';
+  ctx.beginPath();
+  ctx.arc(x + width / 2, y + height * 0.4, width / 2, Math.PI, 2 * Math.PI);
+  ctx.rect(x, y + height * 0.4, width, height * 0.6);
+  ctx.fill();
+
+  // eyes
+  ctx.fillStyle = '#ffffff';
+  ctx.beginPath();
+  ctx.arc(x + width * 0.3, y + height * 0.5, 5, 0, 2 * Math.PI);
+  ctx.arc(x + width * 0.7, y + height * 0.5, 5, 0, 2 * Math.PI);
+  ctx.fill();
+
+  // creepy smile
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.arc(x + width / 2, y + height * 0.65, width * 0.25, 0, Math.PI);
+  ctx.stroke();
+}
+
+// End game
 function endGame() {
   gameOver = true;
   document.getElementById('score-output').textContent = score;
   document.getElementById('game-over').style.display = 'block';
 }
 
-// Reset gioco
+// Reset game
 function resetGame() {
   score = 0;
   gameOver = false;
-  player.x = 50;
-  player.y = height - 60;
+  player.y = height - 80;
   player.velocityY = 0;
-  ghost.x = -100;
-  bullets = [];
   obstacles = [];
   document.getElementById('game-over').style.display = 'none';
   update();
 }
 
-// Avvia il gioco
+// Start game
 update();
 </script>
 </body>
