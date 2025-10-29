@@ -2,51 +2,52 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>FaceTraining Halloween Run – Gothic Edition</title>
+<title>FaceTraining Halloween Run – HD Gothic Edition</title>
 <style>
-  body { margin: 0; background: #0f0a24; color: #fff; text-align: center; font-family: monospace; }
-  h1 { margin-top: 10px; }
-  canvas { background: #1a0d2e; border: 2px solid #fff; display: block; margin: 20px auto; }
-  #game-over { display: none; font-size: 24px; margin-top: 20px; }
-  button { padding: 8px 16px; font-size: 16px; }
+  body { margin:0; background:#0a0920; color:#fff; font-family:monospace; text-align:center; }
+  h1 { margin-top:10px; }
+  canvas { display:block; margin:20px auto; border:2px solid #fff; background:#120b26; }
+  #game-over { display:none; font-size:24px; margin-top:20px; }
+  button { padding:8px 16px; font-size:16px; }
 </style>
 </head>
 <body>
-<h1>Halloween Gothic Run</h1>
-<canvas id="game" width="800" height="400"></canvas>
+<h1>Halloween Gothic Run – HD</h1>
+<canvas id="game" width="1024" height="512"></canvas>
 <div id="game-over">
   <p>Gioco terminato! Punteggio: <span id="score-output"></span></p>
   <button onclick="resetGame()">Rigioca</button>
 </div>
 <script>
 // Canvas setup
-const canvas  = document.getElementById('game');
-const ctx     = canvas.getContext('2d');
-const width   = canvas.width;
-const height  = canvas.height;
+const canvas = document.getElementById('game');
+const ctx    = canvas.getContext('2d');
+const width  = canvas.width;
+const height = canvas.height;
 
-// Player (Veronica) properties
+// Player state
 const player = {
-  x: 80,
-  y: height - 80,
-  width: 40,
-  height: 60,
+  x: 100,
+  y: height - 160,
+  width: 60,
+  height: 120,
   velocityY: 0,
-  gravity: 0.7,
-  jumpForce: 14,
-  onGround: true
+  gravity: 0.8,
+  jumpForce: 18,
+  onGround: true,
+  legPhase: 0 // for simple leg animation
 };
 
 // Obstacles (ghosts)
 let obstacles = [];
 let obstacleTimer = 0;
-const obstacleInterval = 90; // spawn every ~90 frames
+const obstacleInterval = 120; // spawn rate
 
 // Game state
 let score = 0;
 let gameOver = false;
 
-// Keyboard/touch input
+// Input handling
 document.addEventListener('keydown', (e) => {
   if ((e.code === 'Space' || e.code === 'ArrowUp') && player.onGround && !gameOver) {
     player.velocityY = -player.jumpForce;
@@ -60,44 +61,42 @@ canvas.addEventListener('touchstart', () => {
   }
 });
 
-// Main game loop
+// Main loop
 function update() {
   if (gameOver) return;
-  // Clear canvas
-  ctx.clearRect(0, 0, width, height);
   drawBackground();
 
-  // Update player position
+  // Update player
   player.velocityY += player.gravity;
   player.y += player.velocityY;
-  if (player.y + player.height >= height - 20) {
-    player.y = height - 20 - player.height;
+  if (player.y + player.height >= height - 30) {
+    player.y = height - 30 - player.height;
     player.velocityY = 0;
     player.onGround = true;
   }
-
-  // Draw player (16-bit Veronica)
+  // Draw player
   drawPlayer();
 
-  // Spawn obstacles
+  // Spawn ghosts
   obstacleTimer++;
   if (obstacleTimer >= obstacleInterval) {
     obstacleTimer = 0;
-    const size = 50;
+    const size = 100;
     obstacles.push({
       x: width,
-      y: height - 20 - size,
+      y: height - 30 - size,
       width: size,
-      height: size
+      height: size,
+      type: Math.floor(Math.random() * 3) // random ghost variant 0-2
     });
   }
 
-  // Update and draw obstacles
+  // Update & draw ghosts
   obstacles = obstacles.filter(obs => obs.x + obs.width > 0);
-  obstacles.forEach((obs) => {
-    obs.x -= 5; // move left
-    drawGhost(obs.x, obs.y, obs.width, obs.height);
-    // Collision detection
+  obstacles.forEach(obs => {
+    obs.x -= 6; // move left
+    drawGhost(obs);
+    // collision
     if (
       player.x < obs.x + obs.width &&
       player.x + player.width > obs.x &&
@@ -108,80 +107,197 @@ function update() {
     }
   });
 
-  // Update score
+  // Draw score
   score++;
   ctx.fillStyle = '#ffffff';
-  ctx.font = '16px monospace';
-  ctx.fillText('Punteggio: ' + score, 10, 20);
+  ctx.font = '18px monospace';
+  ctx.fillText('Punteggio: ' + score, 20, 30);
 
   requestAnimationFrame(update);
 }
 
-// Draw gothic background with moon and pumpkins
+// Draw background: gradient sky, moon, clouds, pumpkins, trees
 function drawBackground() {
-  // sky gradient
-  const gradient = ctx.createLinearGradient(0, 0, 0, height);
-  gradient.addColorStop(0, '#1a0d2e');
-  gradient.addColorStop(1, '#0f0a24');
-  ctx.fillStyle = gradient;
+  // night sky gradient
+  const grad = ctx.createLinearGradient(0, 0, 0, height);
+  grad.addColorStop(0, '#120b26');
+  grad.addColorStop(1, '#090614');
+  ctx.fillStyle = grad;
   ctx.fillRect(0, 0, width, height);
 
   // moon
-  ctx.fillStyle = '#ddd';
+  ctx.fillStyle = '#e5e5e5';
   ctx.beginPath();
-  ctx.arc(width - 80, 80, 40, 0, 2 * Math.PI);
+  ctx.arc(width - 120, 100, 60, 0, Math.PI * 2);
   ctx.fill();
 
+  // clouds (simple moving)
+  const time = Date.now() * 0.00005;
+  for (let i = 0; i < 3; i++) {
+    const cx = width - (i * 200) - ((time * 100) % width);
+    ctx.fillStyle = 'rgba(200,200,255,0.2)';
+    ctx.beginPath();
+    ctx.ellipse(cx, 100 + i * 20, 120, 30, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // distant trees silhouettes
+  ctx.fillStyle = '#1d1337';
+  for (let i = 0; i < width; i += 200) {
+    const treeHeight = 80 + Math.sin(i * 0.02) * 20;
+    ctx.beginPath();
+    ctx.moveTo(i + 50, height - 30);
+    ctx.lineTo(i + 30, height - 30 - treeHeight);
+    ctx.lineTo(i + 70, height - 30 - treeHeight);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  // pumpkins on ground
+  for (let i = 0; i < width; i += 250) {
+    drawPumpkin(i + (score % 250), height - 40, 30);
+  }
+
   // ground
-  ctx.fillStyle = '#2f204b';
-  ctx.fillRect(0, height - 20, width, 20);
+  ctx.fillStyle = '#261b3f';
+  ctx.fillRect(0, height - 30, width, 30);
 }
 
-// Draw Veronica as 16-bit pixel art figure
+// Draw pumpkin with glow
+function drawPumpkin(x, y, size) {
+  // pumpkin body
+  ctx.fillStyle = '#ff7518';
+  ctx.beginPath();
+  ctx.ellipse(x, y, size, size * 0.7, 0, 0, Math.PI * 2);
+  ctx.fill();
+  // lines
+  ctx.strokeStyle = '#d65a00';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.ellipse(x, y, size, size * 0.7, 0, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.ellipse(x, y, size * 0.7, size * 0.7, 0, 0, Math.PI * 2);
+  ctx.stroke();
+  // glow eyes
+  ctx.fillStyle = '#ffeeb0';
+  ctx.beginPath();
+  ctx.arc(x - size*0.3, y - size*0.1, 4, 0, Math.PI * 2);
+  ctx.arc(x + size*0.3, y - size*0.1, 4, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+// Draw player (Veronica) with high-density pixel-like shapes
 function drawPlayer() {
   const { x, y, width: w, height: h } = player;
-  // Draw head (hair)
-  ctx.fillStyle = '#3f2b56'; // hair dark purple
-  ctx.fillRect(x + 5, y, w - 10, h * 0.3);
-  ctx.fillStyle = '#ffccaa'; // skin color
-  ctx.fillRect(x + 10, y + h * 0.05, w - 20, h * 0.2);
-  // Draw body/shirt
-  ctx.fillStyle = '#7268a6';
-  ctx.fillRect(x + 5, y + h * 0.3, w - 10, h * 0.4);
-  // Shirt text 'Veronica'
-  ctx.fillStyle = '#ffffff';
-  ctx.font = '10px monospace';
-  ctx.fillText('Veronica', x - 2, y + h * 0.55);
-  // Draw legs
-  ctx.fillStyle = '#3f2b56';
-  ctx.fillRect(x + 8, y + h * 0.7, w - 16, h * 0.3);
-}
-
-// Draw ghost obstacles
-function drawGhost(x, y, width, height) {
-  // body
-  ctx.fillStyle = '#4d2e94';
+  // hair
+  ctx.fillStyle = '#2f214b';
   ctx.beginPath();
-  ctx.arc(x + width / 2, y + height * 0.4, width / 2, Math.PI, 2 * Math.PI);
-  ctx.rect(x, y + height * 0.4, width, height * 0.6);
+  ctx.ellipse(x + w/2, y + h*0.2, w*0.45, h*0.25, 0, Math.PI, 2 * Math.PI);
+  ctx.fill();
+
+  // head
+  ctx.fillStyle = '#f4cba0';
+  ctx.beginPath();
+  ctx.ellipse(x + w/2, y + h*0.25, w*0.35, h*0.25, 0, 0, Math.PI * 2);
   ctx.fill();
 
   // eyes
-  ctx.fillStyle = '#ffffff';
+  ctx.fillStyle = '#fff';
   ctx.beginPath();
-  ctx.arc(x + width * 0.3, y + height * 0.5, 5, 0, 2 * Math.PI);
-  ctx.arc(x + width * 0.7, y + height * 0.5, 5, 0, 2 * Math.PI);
+  ctx.arc(x + w*0.35, y + h*0.22, 4, 0, Math.PI * 2);
+  ctx.arc(x + w*0.65, y + h*0.22, 4, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#000';
+  ctx.beginPath();
+  ctx.arc(x + w*0.35, y + h*0.22, 2, 0, Math.PI * 2);
+  ctx.arc(x + w*0.65, y + h*0.22, 2, 0, Math.PI * 2);
   ctx.fill();
 
-  // creepy smile
-  ctx.strokeStyle = '#ffffff';
+  // smile
+  ctx.strokeStyle = '#000';
   ctx.lineWidth = 2;
   ctx.beginPath();
-  ctx.arc(x + width / 2, y + height * 0.65, width * 0.25, 0, Math.PI);
+  ctx.arc(x + w/2, y + h*0.28, w*0.2, 0, Math.PI);
+  ctx.stroke();
+
+  // torso/shirt
+  ctx.fillStyle = '#8c78b7';
+  ctx.fillRect(x + w*0.2, y + h*0.35, w*0.6, h*0.35);
+
+  // text Veronica
+  ctx.fillStyle = '#ffffff';
+  ctx.font = '12px monospace';
+  ctx.fillText('Veronica', x + w*0.05, y + h*0.50);
+
+  // arms
+  ctx.fillStyle = '#f4cba0';
+  // left arm
+  ctx.fillRect(x + w*0.05, y + h*0.38, w*0.15, h*0.15);
+  // right arm
+  ctx.fillRect(x + w*0.80, y + h*0.38, w*0.15, h*0.15);
+
+  // legs animation
+  const phase = (Math.floor(score / 10) % 2); // alternate every 10 score increments
+  if (phase === 0) {
+    // left leg forward, right leg back
+    ctx.fillStyle = '#2f214b';
+    ctx.fillRect(x + w*0.3, y + h*0.7, w*0.1, h*0.3);
+    ctx.fillRect(x + w*0.6, y + h*0.65, w*0.1, h*0.35);
+  } else {
+    // right leg forward, left leg back
+    ctx.fillStyle = '#2f214b';
+    ctx.fillRect(x + w*0.3, y + h*0.65, w*0.1, h*0.35);
+    ctx.fillRect(x + w*0.6, y + h*0.7, w*0.1, h*0.3);
+  }
+}
+
+// Draw ghost obstacles with arms and creepy features
+function drawGhost(obs) {
+  const { x, y, width: w, height: h, type } = obs;
+  // base color variations
+  const colors = ['#4d2e94','#3f256c','#5b3caa'];
+  ctx.fillStyle = colors[type];
+  ctx.beginPath();
+  // head
+  ctx.arc(x + w/2, y + h*0.35, w*0.35, Math.PI, 2 * Math.PI);
+  // body rectangle
+  ctx.rect(x + w*0.15, y + h*0.35, w*0.7, h*0.55);
+  ctx.fill();
+
+  // arms (wavy)
+  ctx.beginPath();
+  ctx.moveTo(x + w*0.15, y + h*0.45);
+  ctx.quadraticCurveTo(x, y + h*0.55, x + w*0.15, y + h*0.65);
+  ctx.quadraticCurveTo(x, y + h*0.75, x + w*0.15, y + h*0.85);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(x + w*0.85, y + h*0.45);
+  ctx.quadraticCurveTo(x + w, y + h*0.55, x + w*0.85, y + h*0.65);
+  ctx.quadraticCurveTo(x + w, y + h*0.75, x + w*0.85, y + h*0.85);
+  ctx.fill();
+
+  // eyes
+  ctx.fillStyle = '#fff';
+  ctx.beginPath();
+  ctx.arc(x + w*0.4, y + h*0.45, 6, 0, Math.PI * 2);
+  ctx.arc(x + w*0.6, y + h*0.45, 6, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#000';
+  ctx.beginPath();
+  ctx.arc(x + w*0.4, y + h*0.45, 3, 0, Math.PI * 2);
+  ctx.arc(x + w*0.6, y + h*0.45, 3, 0, Math.PI * 2);
+  ctx.fill();
+
+  // mouth creepy grin
+  ctx.strokeStyle = '#fff';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.arc(x + w/2, y + h*0.58, w*0.2, 0, Math.PI);
   ctx.stroke();
 }
 
-// End game
+// Game over handling
 function endGame() {
   gameOver = true;
   document.getElementById('score-output').textContent = score;
@@ -192,7 +308,7 @@ function endGame() {
 function resetGame() {
   score = 0;
   gameOver = false;
-  player.y = height - 80;
+  player.y = height - 160;
   player.velocityY = 0;
   obstacles = [];
   document.getElementById('game-over').style.display = 'none';
