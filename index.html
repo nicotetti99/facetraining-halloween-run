@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>FaceTraining Halloween Run</title>
+<style>
+  body { margin: 0; background: #121212; color: #fff; text-align: center; font-family: monospace; }
+  canvas { background: #000; border: 2px solid #fff; display: block; margin: 20px auto; }
+  #game-over { display: none; font-size: 24px; margin-top: 20px; }
+</style>
+</head>
+<body>
+<h1>FaceTraining Halloween Run</h1>
+<canvas id="game" width="800" height="400"></canvas>
+<div id="game-over">
+  <p>Game over! Punteggio: <span id="score-output"></span></p>
+  <button onclick="resetGame()">Rigioca</button>
+</div>
+<script>
+// Impostazioni canvas
+const canvas  = document.getElementById('game');
+const ctx     = canvas.getContext('2d');
+const width   = canvas.width;
+const height  = canvas.height;
+
+// Oggetto giocatore
+const player = {
+  x: 50,
+  y: height - 60,
+  width: 40,
+  height: 40,
+  color: '#ffb300',
+  velocityY: 0,
+  gravity: 0.6,
+  jumpForce: 12,
+  onGround: true,
+};
+
+// Fantasma inseguitore
+const ghost = {
+  x: 10,
+  y: height - 60,
+  width: 40,
+  height: 40,
+  color: '#99ccff'
+};
+
+// Proiettili della pistola
+let bullets = [];
+
+// Ostacoli (zucche/lapidi)
+let obstacles = [];
+let obstacleTimer = 0;
+const obstacleInterval = 120; // ogni N frame
+
+// Stato del gioco
+let score = 0;
+let gameOver = false;
+
+// Gestione input tastiera
+const keys = {};
+document.addEventListener('keydown', (e) => {
+  keys[e.code] = true;
+  // Salta
+  if ((e.code === 'Space' || e.code === 'ArrowUp') && player.onGround && !gameOver) {
+    player.velocityY = -player.jumpForce;
+    player.onGround = false;
+  }
+  // Spara
+  if (e.code === 'KeyF' && !gameOver) {
+    bullets.push({
+      x: player.x + player.width,
+      y: player.y + player.height / 2 - 2,
+      width: 10,
+      height: 4,
+      speed: 8,
+      color: '#00e6e6'
+    });
+  }
+});
+document.addEventListener('keyup', (e) => {
+  keys[e.code] = false;
+});
+canvas.addEventListener('touchstart', () => {
+  if (player.onGround && !gameOver) {
+    player.velocityY = -player.jumpForce;
+    player.onGround = false;
+  }
+});
+
+// Loop principale del gioco
+function update() {
+  if (gameOver) return;
+  ctx.clearRect(0, 0, width, height);
+
+  // Aggiorna giocatore
+  player.velocityY += player.gravity;
+  player.y += player.velocityY;
+  if (player.y + player.height >= height - 20) {
+    player.y = height - 20 - player.height;
+    player.velocityY = 0;
+    player.onGround = true;
+  }
+
+  // Disegna giocatore
+  ctx.fillStyle = player.color;
+  ctx.fillRect(player.x, player.y, player.width, player.height);
+  // Disegna scritta sulla maglietta
+  ctx.fillStyle = '#000';
+  ctx.font = '10px monospace';
+  ctx.fillText('Face', player.x + 4, player.y + 18);
+  ctx.fillText('Trainer', player.x + 2, player.y + 30);
+
+  // Aggiorna fantasma (segue il giocatore con un ritardo)
+  ghost.x += 1;
+  ctx.fillStyle = ghost.color;
+  ctx.beginPath();
+  // semplice forma di fantasma con cerchio e rettangolo
+  ctx.arc(ghost.x + ghost.width / 2, ghost.y + 20, 20, Math.PI, 2 * Math.PI);
+  ctx.rect(ghost.x, ghost.y + 20, ghost.width, ghost.height - 20);
+  ctx.fill();
+
+  // Aggiorna e disegna proiettili
+  bullets = bullets.filter(b => b.x < width);
+  bullets.forEach(bullet => {
+    bullet.x += bullet.speed;
+    ctx.fillStyle = bullet.color;
+    ctx.fillRect(bullet.x, bullet.y, bullet.width, bullet.height);
+  });
+
+  // Genera ostacoli
+  obstacleTimer++;
+  if (obstacleTimer >= obstacleInterval) {
+    obstacleTimer = 0;
+    const size = Math.random() < 0.5 ? 30 : 50; // zucca piccola o lapide grande
+    obstacles.push({
+      x: width,
+      y: height - 20 - size,
+      width: size,
+      height: size,
+      color: size === 30 ? '#ff7518' : '#663300' // zucca arancione o lapide marrone
+    });
+  }
+
+  // Aggiorna e disegna ostacoli
+  obstacles = obstacles.filter(obs => obs.x + obs.width > 0);
+  obstacles.forEach(obs => {
+    obs.x -= 4;
+    ctx.fillStyle = obs.color;
+    ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
+  });
+
+  // Collisioni proiettile-ostacolo
+  bullets.forEach((bullet, bIndex) => {
+    obstacles.forEach((obs, oIndex) => {
+      if (
+        bullet.x < obs.x + obs.width &&
+        bullet.x + bullet.width > obs.x &&
+        bullet.y < obs.y + obs.height &&
+        bullet.y + bullet.height > obs.y
+      ) {
+        bullets.splice(bIndex, 1);
+        obstacles.splice(oIndex, 1);
+        score += 10;
+      }
+    });
+  });
+
+  // Collisioni giocatore-ostacolo o giocatore-fantasma
+  obstacles.forEach(obs => {
+    if (
+      player.x < obs.x + obs.width &&
+      player.x + player.width > obs.x &&
+      player.y < obs.y + obs.height &&
+      player.y + player.height > obs.y
+    ) {
+      endGame();
+    }
+  });
+  // Fantasma raggiunge il giocatore
+  if (
+    ghost.x + ghost.width > player.x &&
+    ghost.x < player.x + player.width &&
+    ghost.y + ghost.height > player.y &&
+    ghost.y < player.y + player.height
+  ) {
+    endGame();
+  }
+
+  // Aggiorna punteggio
+  score++;
+  ctx.fillStyle = '#fff';
+  ctx.font = '16px monospace';
+  ctx.fillText('Score: ' + score, 10, 20);
+
+  requestAnimationFrame(update);
+}
+
+// Termina il gioco
+function endGame() {
+  gameOver = true;
+  document.getElementById('score-output').textContent = score;
+  document.getElementById('game-over').style.display = 'block';
+}
+
+// Reset gioco
+function resetGame() {
+  score = 0;
+  gameOver = false;
+  player.x = 50;
+  player.y = height - 60;
+  player.velocityY = 0;
+  ghost.x = 10;
+  bullets = [];
+  obstacles = [];
+  document.getElementById('game-over').style.display = 'none';
+  update();
+}
+
+// Avvia il gioco
+update();
+</script>
+</body>
+</html>
