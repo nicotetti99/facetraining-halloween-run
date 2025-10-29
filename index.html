@@ -38,7 +38,7 @@ const player = {
 
 // Fantasma inseguitore
 const ghost = {
-  x: 10,
+  x: -100,
   y: height - 60,
   width: 40,
   height: 40,
@@ -112,7 +112,7 @@ function update() {
   ctx.fillText('Trainer', player.x + 2, player.y + 30);
 
   // Aggiorna fantasma (segue il giocatore con un ritardo)
-  ghost.x += 1;
+  ghost.x += 0.5; // move slowly
   ctx.fillStyle = ghost.color;
   ctx.beginPath();
   // semplice forma di fantasma con cerchio e rettangolo
@@ -210,7 +210,7 @@ function resetGame() {
   player.x = 50;
   player.y = height - 60;
   player.velocityY = 0;
-  ghost.x = 10;
+  ghost.x = -100;
   bullets = [];
   obstacles = [];
   document.getElementById('game-over').style.display = 'none';
